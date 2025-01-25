@@ -11,16 +11,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit_option_menu
 from streamlit_option_menu import option_menu
+import folium
+from folium.plugins import HeatMap
+from io import BytesIO
+from streamlit_folium import folium_static
 
 #Define connection parameters
 connection_params = {
-    "user": "VLAD7984",
-    "password": "Mgv1224?",
-    "account": "hia45134.east-us-2.azure",  # E.g., "abc123.snowflakecomputing.com"
-    "warehouse": "COMPUTE_WH",
-    "database": "AVIATION_BIRD_STRIKES",
-    "schema": "PUBLIC",
-    "role": "ACCOUNTADMIN"
+    "user": "",
+    "password": "",
+    "account": "",  # E.g., "abc123.snowflakecomputing.com"
+    "warehouse": "",
+    "database": "",
+    "schema": "",
+    "role": ""
 }
 
 conn = snowflake.connector.connect(**connection_params)
@@ -63,7 +67,7 @@ top_states = cursor.fetchall()
 #Create top states df
 states_df = pd.DataFrame(top_states, columns=["State", "Bird Strikes"])
 #Replace na with unknown
-states_df['State'].fillna('UNKNOWN', inplace=True)
+states_df['State'].fillna('Unknown', inplace=True)
 
 #Query to get top 10 airports
 query_top_airports = """
@@ -81,6 +85,44 @@ top_airports = cursor.fetchall()
 #Create top airports df
 airports_df = pd.DataFrame(top_airports, columns=["Airport", "Bird Strikes"])
 
+
+#Query to get top 10 carriers
+query_top_carriers = """
+SELECT 
+    OPERATOR, COUNT(*) AS carriers
+FROM FAA_BIRD_STRIKES
+GROUP BY OPERATOR
+ORDER BY carriers DESC
+LIMIT 10
+"""
+#Execute query
+cursor.execute(query_top_carriers)
+top_carriers = cursor.fetchall()
+
+#Create top airports df
+carriers_df = pd.DataFrame(top_carriers, columns=["Carrier", "Bird Strikes"])
+
+#Query to get coordinates data
+query_coords = """
+SELECT 
+    AIRPORT_LATITUDE, AIRPORT_LONGITUDE AS airport_coords
+FROM FAA_BIRD_STRIKES
+"""
+
+#Execute query
+cursor.execute(query_top_airports)
+airport_coords = cursor.fetchall()
+
+#Create coordinate df
+coords_df = pd.DataFrame(airport_coords, columns=["latitude", "longitude"])
+coords_df["latitude"] = pd.to_numeric(coords_df["latitude"], errors="coerce")
+coords_df["longitude"] = pd.to_numeric(coords_df["longitude"], errors="coerce")
+coords_df.dropna(subset=["latitude", "longitude"], inplace=True)
+
+global_map = folium.Map(location=[37.0902, -95.7129], zoom_start=2)
+heat_data = coords_df[["latitude", "longitude"]].values.tolist()  # Converts to a list of [latitude, longitude]
+HeatMap(heat_data).add_to(global_map)
+
 ############################################################################
 #Configure settings for streamlit app
 st.set_page_config(
@@ -95,7 +137,7 @@ alt.themes.enable("dark")
 with st.sidebar:
   selected = option_menu(
     menu_title = "Menu",
-    options = ["Home","Bird Strikes Over Time", "Seasonality","State Map", "example3", "About"],
+    options = ["Home","Heatmap", "Seasonality","State Map", "example3", "About"],
     icons = ["house","bird","seasons", "map","map","chart-simple"],
     menu_icon = "cast",
     default_index = 0,
@@ -129,7 +171,7 @@ if selected == "Home":
         st.metric(label="Total Injuries", value=total_injuries)
     
     #Create two columns for the bar charts side by side
-    chart_col1, chart_col2 = st.columns(2)    
+    chart_col1, chart_col2, chart_col3 = st.columns(3)    
     
     with chart_col1:
         #Plot Top 10 States bar chart
@@ -138,7 +180,6 @@ if selected == "Home":
         ax.bar(states_df["State"], states_df["Bird Strikes"], color='skyblue')
         ax.set_xlabel("State")
         ax.set_ylabel("Number of Bird Strikes")
-        ax.set_title("Top 10 States by Bird Strikes")
         st.pyplot(fig)
 
     with chart_col2:
@@ -148,9 +189,26 @@ if selected == "Home":
         ax.barh(airports_df["Airport"], airports_df["Bird Strikes"], color='lightgreen')
         ax.set_xlabel("Airport")
         ax.set_ylabel("Number of Bird Strikes")
-        ax.set_title("Top 10 Airports by Bird Strikes")
         ax.invert_yaxis()
         st.pyplot(fig)
+    
+    with chart_col3:
+        folium_static(global_map)
+        #Plot Top 10 Carriers bar chart
+        #st.subheader("Top 10 Carriers with Bird Strikes")
+        #fig, ax = plt.subplots()
+        #ax.barh(carriers_df["Carrier"], carriers_df["Bird Strikes"], color='orange')
+        #ax.set_xlabel("Carrier")
+        #ax.set_ylabel("Number of Bird Strikes")
+        #ax.invert_yaxis()
+        #st.pyplot(fig)
+    
+    
+###################################################################################################
+#Configure Heatmap page.    
+elif selected == "Heatmap":
+    st.title("Heatmap of Global Bird Strikes")
+    folium_static(global_map)
 
 ###################################################################################################
 #Configure About page.
