@@ -28,7 +28,8 @@ connection_params = {
 }
 
 conn = snowflake.connector.connect(**connection_params)
-cursor = conn.cursor()    
+cursor = conn.cursor()   
+
 ###################################################################################################
 #Configure settings for streamlit app
 st.set_page_config(
@@ -43,59 +44,25 @@ alt.themes.enable("dark")
 with st.sidebar:
   selected = option_menu(
     menu_title = "Menu",
-    options = ["Home","Heatmap", "Yearly Strikes","Time of Day", "Phase of Flight","Seasonality", "About"],
-    icons = ["house","map","bar_chart","clock","airplane_departure","map","chart-simple"],
+    options = ["Home", "Heatmap", "Yearly Strikes", "Time", "Seasonality", "Aircraft", "Species", "Scatter Plot", "About"],
+    icons = ["house", "map", "calendar", "clock", "sun", "airplane", "cloud", "scatter", "question"],
     menu_icon = "cast",
     default_index = 0,
   )
-
-
-###################################################################################################
-#Query to get bird strikes grouped by time of day
-query_ToD = """
-SELECT 
-    TIME_OF_DAY, COUNT(*) AS bird_strikes
-FROM FAA_BIRD_STRIKES
-GROUP BY TIME_OF_DAY
-ORDER BY bird_strikes ASC
-"""
-
-#Execute query
-cursor.execute(query_ToD)
-time_of_day = cursor.fetchall()
-
-#Create time of day df, convert strikes to numeric
-time_of_day_df = pd.DataFrame(time_of_day, columns=["Time of Day", "Bird Strikes"])
-time_of_day_df["Bird Strikes"] = pd.to_numeric(time_of_day_df["Bird Strikes"], errors="coerce")
-
-#Convert na to unknown
-time_of_day_df['Time of Day'].fillna('Unknown', inplace=True)
-
-#Query to get bird_strikes by time
-query_time = """
-SELECT 
-    HOUR(TIME), COUNT(*) AS bird_strikes
-FROM FAA_BIRD_STRIKES
-GROUP BY HOUR(TIME)
-ORDER BY bird_strikes ASC
-"""
-
-#Execute query
-cursor.execute(query_time)
-time_hour = cursor.fetchall()
-
-#Create time  df, convert strikes to numeric
-time_df = pd.DataFrame(time_hour, columns=["Hour", "Bird Strikes"])
-time_df["Bird Strikes"] = pd.to_numeric(time_df["Bird Strikes"], errors="coerce")
-time_df = time_df.dropna()
   
 ###################################################################################################
 #Configure Home page.
 if selected == "Home":
     st.title("Bird Strikes in Aviation Dashboard")
-    st.write("The purpose of this app is to allow users to analyze and visualize aviation bird strike data from 1996 \
-             to present and offer valuable \
-             insights into trends. Select an option from the sidebar to get started.")
+    st.markdown("""
+        Welcome to the **Bird Strikes in Aviation Dashboard**! This app allows users to analyze and visualize aviation bird strike data from **1996 to present**. 
+        Discover valuable insights into trends, seasonal patterns, and other metrics to help improve aviation safety.
+        
+        👉 **Get started** by selecting an option from the sidebar.
+        
+        Data obtained fromthe official 
+        [**FAA Wildlife Strike Database**](https://wildlife.faa.gov/).
+    """, unsafe_allow_html=True)
     st.markdown("## Key Metrics (1996 - 2025):")         
     
     
@@ -287,7 +254,7 @@ elif selected == "Heatmap":
     HeatMap(heat_data).add_to(global_map)
     
     #Display map in app
-    st.title(f"Heatmap of Global Bird Strikes ({start_year}-{end_year}) for Operator: {selected_operator}")
+    st.title(f"Heatmap of Global Bird Strikes ({start_year}-{end_year})")
     folium_static(global_map)
     
 ###################################################################################################
@@ -363,10 +330,71 @@ elif selected == "Yearly Strikes":
         
 ###################################################################################################
 #Configure Time of Day page.
-elif selected == "Time of Day":
+elif selected == "Time":
     st.title("Number of Bird Strikes")
-    #Create two columns for the bar charts side by side
-    chart_col1, chart_col2 = st.columns(2)       
+    
+    #Query to get bird strikes grouped by time of day
+    query_ToD = """
+    SELECT 
+        TIME_OF_DAY, COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY TIME_OF_DAY
+    ORDER BY bird_strikes ASC
+    """
+
+    #Execute query
+    cursor.execute(query_ToD)
+    time_of_day = cursor.fetchall()
+
+    #Create time of day df, convert strikes to numeric
+    time_of_day_df = pd.DataFrame(time_of_day, columns=["Time of Day", "Bird Strikes"])
+    time_of_day_df["Bird Strikes"] = pd.to_numeric(time_of_day_df["Bird Strikes"], errors="coerce")
+
+    #Convert na to unknown
+    time_of_day_df['Time of Day'].fillna('Unknown', inplace=True)
+
+    #Query to get bird_strikes by time
+    query_time = """
+    SELECT 
+        HOUR(TIME), COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY HOUR(TIME)
+    ORDER BY bird_strikes ASC
+    """
+    
+    #Execute query
+    cursor.execute(query_time)
+    time_hour = cursor.fetchall()
+
+    #Create time  df, convert strikes to numeric
+    time_df = pd.DataFrame(time_hour, columns=["Hour", "Bird Strikes"])
+    time_df["Bird Strikes"] = pd.to_numeric(time_df["Bird Strikes"], errors="coerce")
+    time_df = time_df.dropna()
+    
+    #Query to get bird strikes grouped by phase of flight
+    query_phase_of_flight = """
+    SELECT 
+        PHASE_OF_FLIGHT, COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY PHASE_OF_FLIGHT
+    """
+
+    #Execute query
+    cursor.execute(query_phase_of_flight)
+    phase_of_flight = cursor.fetchall()
+
+    #Create phase of flight df, convert strikes to numeric
+    phase_of_flight_df = pd.DataFrame(phase_of_flight, columns=["Phase of Flight", "Bird Strikes"])
+    phase_of_flight_df["Bird Strikes"] = pd.to_numeric(phase_of_flight_df["Bird Strikes"], errors="coerce")
+    #Convert na to unknown
+    phase_of_flight_df['Phase of Flight'].fillna('Enroute', inplace=True)
+    #Group by phase of flight again because null values changes to Unknown
+    phase_of_flight_df = phase_of_flight_df.groupby('Phase of Flight')['Bird Strikes'].sum().reset_index()
+    #Order by bird strikes descending
+    phase_of_flight_df = phase_of_flight_df.sort_values(by='Bird Strikes', ascending=False)
+
+    #Create three columns for the bar charts side by side
+    chart_col1, chart_col2, chart_col3 = st.columns(3)       
     with chart_col1:
         st.subheader("by Time of Day")
         fig, ax = plt.subplots(figsize=(8, 8))
@@ -380,6 +408,7 @@ elif selected == "Time of Day":
         labeldistance=1.1,
         pctdistance=0.85 
         st.pyplot(fig)
+        
     with chart_col2:
        st.subheader("by Hour")
        fig, ax = plt.subplots(figsize=(8, 8))
@@ -390,7 +419,266 @@ elif selected == "Time of Day":
        ax.set_ylabel("Number of Bird Strikes", fontsize=12)
        ax.tick_params(axis="x", rotation=45)
        st.pyplot(fig)
+      
+    with chart_col3:
+        st.subheader("By Phase of Flight")
+        fig, ax = plt.subplots()
+        ax.barh(phase_of_flight_df["Phase of Flight"], phase_of_flight_df["Bird Strikes"], color='cornflowerblue')
+        ax.set_xlabel("Number of Bird Strikes")
+        ax.set_ylabel("Phase of Flight")
+        ax.invert_yaxis()
+        st.pyplot(fig)
+       
+###################################################################################################
+#Configure Seasonality page 
+elif selected == "Seasonality":
+    st.title("Seasonality Analysis")
+    
+    #Query to monthly strike get data
+    query_monthly_strikes = """
+    SELECT 
+        INCIDENT_MONTH, COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY INCIDENT_MONTH
+    ORDER BY INCIDENT_MONTH ASC
+    """
+    #Execute query
+    cursor.execute(query_monthly_strikes)
+    monthly_strikes = cursor.fetchall()
+
+    #Create monthly strikes df
+    monthly_strikes_df = pd.DataFrame(monthly_strikes, columns=["Month", "Bird Strikes"])
+    monthly_strikes_df["Month"] = pd.to_numeric(monthly_strikes_df["Month"], errors="coerce")
+    monthly_strikes_df["Bird Strikes"] = pd.to_numeric(monthly_strikes_df["Bird Strikes"], errors="coerce")
+    
+    #Query to quarterly strike get data
+    query_quarterly_strikes = """
+    SELECT 
+        QUARTER(INCIDENT_DATE) as quarter, COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY quarter
+    ORDER BY quarter ASC
+    """
+    #Execute query
+    cursor.execute(query_quarterly_strikes)
+    quarterly_strikes = cursor.fetchall()
+
+    #Create quarterly strikes df
+    quarterly_strikes_df = pd.DataFrame(quarterly_strikes, columns=["Quarter", "Bird Strikes"])
+    quarterly_strikes_df["Quarter"] = pd.to_numeric(quarterly_strikes_df["Quarter"], errors="coerce")
+    quarterly_strikes_df["Bird Strikes"] = pd.to_numeric(quarterly_strikes_df["Bird Strikes"], errors="coerce")
+    
+    #Create two columns for the bar charts side by side
+    chart_col1, chart_col2 = st.columns(2)    
+    
+    with chart_col1:
+        #Plot monthly strikes bar chart
+        st.subheader("Monthly Bird Strikes")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(
+            monthly_strikes_df["Month"],
+            monthly_strikes_df["Bird Strikes"],
+            color="lightcoral",
+            width=0.6
+        )
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Number of Bird Strikes", fontsize=12)
+        ax.set_xticks(range(1, 13))
+        ax.set_xticklabels(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
+        ax.grid(axis="y", linestyle="--", alpha=0.7)
+        st.pyplot(fig)
         
+    with chart_col2:
+        #Plot quarterly strikes bar chart
+        st.subheader("Quarterly Bird Strikes")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(
+            quarterly_strikes_df["Quarter"],
+            quarterly_strikes_df["Bird Strikes"],
+            color="darkorange",
+            width=0.6
+        )
+        ax.set_xlabel("Quarter", fontsize=12)
+        ax.set_ylabel("Number of Bird Strikes", fontsize=12)
+        ax.set_xticks(range(1, 5))
+        ax.set_xticklabels(["Q1", "Q2", "Q3", "Q4"])
+        ax.grid(axis="y", linestyle="--", alpha=0.7)
+        st.pyplot(fig)
+
+###################################################################################################
+#Configure Aircraft page.
+elif selected == "Aircraft":
+    st.title("Number of Bird Strikes")
+    
+    #Query to get bird strikes grouped by aircraft
+    query_aircraft = """
+    SELECT 
+        AIRCRAFT, COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY AIRCRAFT
+    ORDER BY bird_strikes DESC
+    LIMIT 25
+    """
+
+    #Execute query
+    cursor.execute(query_aircraft)
+    aircraft = cursor.fetchall()
+
+    #Create phase of flight df, convert strikes to numeric
+    aircraft_df = pd.DataFrame(aircraft, columns=["Aircraft", "Bird Strikes"])
+    aircraft_df["Bird Strikes"] = pd.to_numeric(aircraft_df["Bird Strikes"], errors="coerce")
+    
+    #Query to get bird strikes grouped by engine type
+    #Type of power A = reciprocating engine (piston): B = Turbojet: C = Turboprop: D = Turbofan: E = None (glider): F = Turboshaft (helicopter): Y = Other
+    query_engine_class = """
+    SELECT
+        CASE 
+              WHEN AC_CLASS = 'A' THEN 'Piston'
+              WHEN AC_CLASS= 'B' THEN 'Turbojet'
+              WHEN AC_CLASS = 'C' THEN 'Turboprop'
+              WHEN AC_CLASS = 'D' THEN 'Turbofan'
+              WHEN AC_CLASS = 'E' THEN 'Glider'
+              WHEN AC_CLASS = 'F' THEN 'Helicopter'
+              WHEN AC_CLASS = 'Y' THEN 'Other'
+              ELSE 'Unknown'
+        END AS ENGINE_CLASS,
+        COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY ENGINE_CLASS
+    ORDER BY bird_strikes DESC
+    """
+
+    #Execute query
+    cursor.execute(query_engine_class)
+    engine_class = cursor.fetchall()
+
+    #Create engine class df, convert strikes to numeric
+    engine_class_df = pd.DataFrame(engine_class, columns=["Engine Class", "Bird Strikes"])
+    engine_class_df["Bird Strikes"] = pd.to_numeric(engine_class_df["Bird Strikes"], errors="coerce")
+    #Convert na to unknown
+    engine_class_df['Engine Class'].fillna('Unknown', inplace=True)
+    
+    #Query to get bird strikes grouped by engine type
+    query_num_engines = """
+        SELECT 
+            CASE 
+                  WHEN NUM_ENGS::INT = 1 THEN 'One'
+                  WHEN NUM_ENGS::INT = 2 THEN 'Two'
+                  WHEN NUM_ENGS::INT = 3 THEN 'Three'
+                  WHEN NUM_ENGS::INT = 4 THEN 'Four'
+                  ELSE 'Unknown'
+            END AS NUM_ENGINES,
+            COUNT(*) AS bird_strikes
+        FROM FAA_BIRD_STRIKES
+        GROUP BY NUM_ENGINES
+        ORDER BY NUM_ENGINES DESC
+    """
+
+    #Execute query
+    cursor.execute(query_num_engines)
+    num_engines = cursor.fetchall()
+
+    #Create engine class df, convert strikes to numeric
+    num_engines_df = pd.DataFrame(num_engines, columns=["Number of Engines", "Bird Strikes"])
+    num_engines_df["Bird Strikes"] = pd.to_numeric(num_engines_df["Bird Strikes"], errors="coerce")
+    #Convert na to unknown
+    num_engines_df['Number of Engines'].fillna('Unknown', inplace=True)
+    
+    #Create two columns for the bar charts side by side
+    chart_col1, chart_col2, chart_col3 = st.columns(3)  
+    
+    with chart_col1:
+        st.subheader("by Aircraft Type")
+        #Create bird strikes by aircraft chart
+        fig, ax = plt.subplots(figsize=(10,5))
+        ax.barh(aircraft_df["Aircraft"], aircraft_df["Bird Strikes"], color='slateblue')
+        ax.set_xlabel("Number of Bird Strikes")
+        ax.set_ylabel("Aircraft")
+        ax.invert_yaxis()
+        st.pyplot(fig)
+    
+    with chart_col2:
+        st.subheader("by Engine Class")
+        #Create bird strikes by engine class chart
+        fig, ax = plt.subplots(figsize=(10,5))
+        ax.bar(engine_class_df["Engine Class"], engine_class_df["Bird Strikes"], color='plum')
+        ax.set_ylabel("Number of Bird Strikes")
+        ax.set_xlabel("Engine Class")
+        st.pyplot(fig)
+        
+    with chart_col3:
+        st.subheader("by Number of Engines")
+        #Create bird strikes by number of engines chart
+        fig, ax = plt.subplots(figsize=(10,5))
+        ax.bar(num_engines_df["Number of Engines"], num_engines_df["Bird Strikes"], color='midnightblue')
+        ax.set_ylabel("Number of Bird Strikes")
+        ax.set_xlabel("Number of Engines")
+        #Customize the x-axis ticks and labels
+        ordered_ticks = ['One', 'Two', 'Three', 'Four', 'Unknown']
+        # Set the order of x-ticks explicitly
+        ax.set_xticks(range(len(ordered_ticks)))
+        ax.set_xticklabels(ordered_ticks)
+        st.pyplot(fig)
+
+
+###################################################################################################
+#Configure Species page.
+elif selected == "Species":
+    st.title("Number of Bird Strikes by Species")
+    
+    #Query to get bird strikes grouped by phase of flight
+    query_species = """
+    SELECT 
+        SPECIES, COUNT(*) AS bird_strikes
+    FROM FAA_BIRD_STRIKES
+    GROUP BY SPECIES
+    ORDER BY bird_strikes DESC
+    LIMIT 25
+    """
+
+    #Execute query
+    cursor.execute(query_species)
+    species = cursor.fetchall()
+
+    #Create phase of flight df, convert strikes to numeric
+    species_df = pd.DataFrame(species, columns=["Species", "Bird Strikes"])
+    species_df["Bird Strikes"] = pd.to_numeric(species_df["Bird Strikes"], errors="coerce")
+    
+    #Create phase of flight chart
+    fig, ax = plt.subplots(figsize=(10,5))
+    ax.barh(species_df["Species"], species_df["Bird Strikes"], color='forestgreen')
+    ax.set_xlabel("Number of Bird Strikes")
+    ax.set_ylabel("Species")
+    ax.invert_yaxis()
+    st.pyplot(fig)
+       
+###################################################################################################
+#Configure Scatter Plot page.    
+elif selected == "Scatter Plot":
+    #Query to get coordinates data, with user option to filter year and operator.
+    scatter_query = """
+        SELECT 
+            INCIDENT_DATE, COST_REPAIRS AS COST, HEIGHT
+        FROM FAA_BIRD_STRIKES
+    """
+
+    #Execute the query
+    cursor.execute(scatter_query)
+    scatter = cursor.fetchall()
+    
+    #Create scatter df
+    scatter_df = pd.DataFrame(scatter, columns=["Date", "Cost", "Height"])
+    scatter_df["Cost"] = pd.to_numeric(scatter_df["Cost"], errors="coerce")
+    scatter_df["Height"] = pd.to_numeric(scatter_df["Height"], errors="coerce")
+    
+    #Create scatter plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(scatter_df["Height"], scatter_df["Cost"], color="b")
+    ax.set_xlabel("Height", fontsize=12)
+    ax.set_ylabel("Cost", fontsize=12)
+    ax.set_title(f"Scatter Plot: Cost vs Height", fontsize=14)
+    st.pyplot(fig)
+
 ###################################################################################################
 #Configure About page.
 elif selected == "About":
@@ -401,7 +689,8 @@ elif selected == "About":
 
         <p><a href='https://www.linkedin.com/in/vlad-lee' target='_blank'>LinkedIn</a></p>
         <p><a href='https://www.nera.com/experts/l/vladislav-lee.html?lang=en' target='_blank'>NERA</a></p>
-        <p><a href='https://github.com/bomimyhomie/NFL-Analysis' target='_blank'>GitHub</a></p>
+        <p><a href='https://github.com/bomimyhomie/Aviation-Bird-Strike' target='_blank'>GitHub</a></p>
         <p>For questions or feedback, contact the author at 
         <a href='mailto:Vlad7984@gmail.com'>vlad7984@gmail.com</a>.</p>
     """, unsafe_allow_html=True)
+
