@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-@author: Vlad Lee
-"""
-
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -13,8 +9,10 @@ import streamlit_option_menu
 from streamlit_option_menu import option_menu
 import folium
 from folium.plugins import HeatMap
-from io import BytesIO
 from streamlit_folium import folium_static
+import matplotlib.ticker as mticker
+import scipy.stats as stats
+import seaborn as sns
 
 #Define connection parameters
 connection_params = {
@@ -45,7 +43,7 @@ with st.sidebar:
   selected = option_menu(
     menu_title = "Menu",
     options = ["Home", "Heatmap", "Yearly Strikes", "Time", "Seasonality", "Aircraft", "Species", "Scatter Plot", "About"],
-    icons = ["house", "map", "calendar", "clock", "sun", "airplane", "cloud", "scatter", "question"],
+    icons = ["house", "map", "calendar", "clock", "sun", "airplane", "cloud", "dot", "question"],
     menu_icon = "cast",
     default_index = 0,
   )
@@ -60,7 +58,7 @@ if selected == "Home":
         
         👉 **Get started** by selecting an option from the sidebar.
         
-        Data obtained fromthe official 
+        Data obtained from the official 
         [**FAA Wildlife Strike Database**](https://wildlife.faa.gov/).
     """, unsafe_allow_html=True)
     st.markdown("## Key Metrics (1996 - 2025):")         
@@ -655,28 +653,85 @@ elif selected == "Species":
 ###################################################################################################
 #Configure Scatter Plot page.    
 elif selected == "Scatter Plot":
-    #Query to get coordinates data, with user option to filter year and operator.
-    scatter_query = """
+    #Sidebar filters
+    #Add year range filter
+    year_range = st.sidebar.slider("Select Year Range", min_value=1996, max_value=2025, value=(1996, 2025), step=1)
+    start_year, end_year = year_range
+    #Sidebar to select X variable
+    x_variable = st.sidebar.selectbox(
+        "Select X Variable",
+        options=["Height", "Speed", "Distance"],
+        index=0
+    )
+    
+    #Define the corresponding column name in the database
+    x_column_map = {
+        "Height": "HEIGHT",
+        "Speed": "SPEED",
+        "Distance": "DISTANCE"
+    }
+    x_column = x_column_map[x_variable]  # Get selected column name
+    
+    #Define the query with dynamic X variable
+    scatter_query = f"""
         SELECT 
-            INCIDENT_DATE, COST_REPAIRS AS COST, HEIGHT
+            INCIDENT_DATE, TOTAL_COST, WARNED, {x_column}
         FROM FAA_BIRD_STRIKES
+        WHERE TOTAL_COST IS NOT NULL 
+        AND {x_column} IS NOT NULL
+        AND YEAR(INCIDENT_DATE) BETWEEN %s AND %s
     """
+    
+    #Dynamic query
+    filters = []
+    params = []
 
-    #Execute the query
-    cursor.execute(scatter_query)
+    #Execute the query with year filtering
+    cursor.execute(scatter_query, (start_year, end_year))
     scatter = cursor.fetchall()
     
     #Create scatter df
-    scatter_df = pd.DataFrame(scatter, columns=["Date", "Cost", "Height"])
-    scatter_df["Cost"] = pd.to_numeric(scatter_df["Cost"], errors="coerce")
-    scatter_df["Height"] = pd.to_numeric(scatter_df["Height"], errors="coerce")
+    scatter_df = pd.DataFrame(scatter, columns=["Date", "Total_Cost", "Warned", x_variable])
+    #Make sure values are numeric
+    scatter_df["Total_Cost"] = pd.to_numeric(scatter_df["Total_Cost"], errors="coerce")
+    scatter_df[x_variable] = pd.to_numeric(scatter_df[x_variable], errors="coerce")
+    #Apply log transformation
+    scatter_df[f"Log_{x_variable}"] = np.log10(scatter_df[x_variable] + 1)
+    scatter_df["Log_Cost"] = np.log10(scatter_df["Total_Cost"] + 1)
+    #Replace null with Unknown
+    scatter_df['Warned'] = scatter_df['Warned'].fillna('Unknown').astype('category')
+    #Drop NAs
+    scatter_df = scatter_df.dropna(subset=[f"Log_{x_variable}", "Log_Cost"])
+    
+    #Calculate Pearson's r
+    pearson_r, _ = stats.pearsonr(scatter_df[f"Log_{x_variable}"], scatter_df["Log_Cost"])
+    
     
     #Create scatter plot
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(scatter_df["Height"], scatter_df["Cost"], color="b")
-    ax.set_xlabel("Height", fontsize=12)
-    ax.set_ylabel("Cost", fontsize=12)
-    ax.set_title(f"Scatter Plot: Cost vs Height", fontsize=14)
+    sns.scatterplot(
+    data=scatter_df, 
+    x=f"Log_{x_variable}", 
+    y="Log_Cost", 
+    hue="Warned",      #Color by 'Warned'
+    ax=ax
+    )
+    #Set axis labels and title
+    ax.set_xlabel(f"Log {x_variable}", fontsize=12)
+    ax.set_ylabel("Log Cost", fontsize=12)
+    ax.set_title(f"Scatter Plot: Log Cost vs Log {x_variable} | Pearson's r = {pearson_r:.2f}", fontsize=14)
+
+    # Calculate Pearson's r for each 'Warned' category and display on plot
+    for warned_value in scatter_df['Warned'].unique():
+        subset = scatter_df[scatter_df['Warned'] == warned_value]
+        pearson_r, _ = stats.pearsonr(subset[f"Log_{x_variable}"], subset["Log_Cost"])
+        ax.text(
+            0.95, 0.05 + 0.05 * list(scatter_df['Warned'].unique()).index(warned_value), 
+            f"Pearson's r ({warned_value}) = {pearson_r:.2f}", 
+            ha="left", va="top", transform=ax.transAxes, 
+            fontsize=12, color="black"
+        )
+    
     st.pyplot(fig)
 
 ###################################################################################################
@@ -684,7 +739,7 @@ elif selected == "Scatter Plot":
 elif selected == "About":
     st.title("About")
     st.markdown("""
-        My name is Vlad Lee. I am an economic consultant and a fellow at NYC Data Science Academy. 
+        My name is Vlad Lee. I am an economic consultant at NERA and a fellow at NYC Data Science Academy. 
         Feel free to check out my profile pages and GitHub!
 
         <p><a href='https://www.linkedin.com/in/vlad-lee' target='_blank'>LinkedIn</a></p>
