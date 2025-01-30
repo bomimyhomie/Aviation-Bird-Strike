@@ -17,7 +17,7 @@ import seaborn as sns
 #Define connection parameters
 connection_params = {
     "user": "",
-    "password": "",
+    "password": "?",
     "account": "",  # E.g., "abc123.snowflakecomputing.com"
     "warehouse": "",
     "database": "",
@@ -25,6 +25,7 @@ connection_params = {
     "role": ""
 }
 
+#Connect to snowflake database
 conn = snowflake.connector.connect(**connection_params)
 cursor = conn.cursor()   
 
@@ -36,6 +37,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded")
 
+#Change to dark theme
 alt.themes.enable("dark")
 
 #Configure main sidebar
@@ -63,7 +65,6 @@ if selected == "Home":
     """, unsafe_allow_html=True)
     st.markdown("## Key Metrics (1996 - 2025):")         
     
-    
 #Query to get total metrics
     query_total_metrics = """
     SELECT
@@ -74,9 +75,10 @@ if selected == "Home":
         SUM(CAST(NR_INJURIES AS NUMERIC)) AS total_injuries
     FROM FAA_BIRD_STRIKES
     """
+    #Execute query
     cursor.execute(query_total_metrics)
 
-    #Fetch the results
+    #Create list with results
     metrics_result = cursor.fetchone()
     total_bird_strikes = metrics_result[0]
     total_cost = metrics_result[1]
@@ -102,7 +104,6 @@ if selected == "Home":
     with col5:
         st.metric(label="Total Injuries", value=total_injuries)
     
-###################################################################################################
     #Query to get top 10 states
     query_top_states = """
     SELECT 
@@ -112,7 +113,7 @@ if selected == "Home":
     ORDER BY bird_strikes DESC
     LIMIT 10
     """
-
+    
     #Execute query
     cursor.execute(query_top_states)
     top_states = cursor.fetchall()
@@ -154,7 +155,7 @@ if selected == "Home":
     #Create top airports df
     carriers_df = pd.DataFrame(top_carriers, columns=["Carrier", "Bird Strikes"])
     
-    #Create two columns for the bar charts side by side
+    #Create three columns for the bar charts side by side
     chart_col1, chart_col2, chart_col3 = st.columns(3)    
     
     with chart_col1:
@@ -189,7 +190,7 @@ if selected == "Home":
 ###################################################################################################
 #Configure Heatmap page.    
 elif selected == "Heatmap":
-    #Query to get coordinates data, with user option to filter year and operator.
+    #Query to get coordinates data, with user option to filter year, operator, and time of day.
     base_query = """
         SELECT 
             AIRPORT_LATITUDE, AIRPORT_LONGITUDE, INCIDENT_YEAR, TIME_OF_DAY, OPERATOR, COUNT(*) AS BIRD_STRIKES
@@ -203,19 +204,25 @@ elif selected == "Heatmap":
     
     #Operators filter
     query_operators = "SELECT DISTINCT OPERATOR FROM FAA_BIRD_STRIKES ORDER BY OPERATOR"
+    #Execute query
     cursor.execute(query_operators)
     operators = cursor.fetchall()
+    #Create list of operators
     operator_list = ["All"] + [operator[0] for operator in operators]
+    #Add sidebar to streamlit
     selected_operator = st.sidebar.selectbox("Select Operator", operator_list)
     
     #Time of Day filter
     query_time_of_day = "SELECT DISTINCT TIME_OF_DAY FROM FAA_BIRD_STRIKES ORDER BY TIME_OF_DAY"
+    #Execute query
     cursor.execute(query_time_of_day)
     time_of_day = cursor.fetchall()
+    #Create list for time of day
     time_of_day_list = ["All"] + [ToD[0] if ToD[0] is not None else "Unknown" for ToD in time_of_day]
+    #Add sidebar to streamlit
     selected_time_of_day = st.sidebar.selectbox("Select Time of Day", time_of_day_list)
 
-    #Dynamic query
+    #Initialize filters and parameters for dynamic query
     filters = []
     params = []
   
@@ -233,7 +240,7 @@ elif selected == "Heatmap":
         filters.append("TIME_OF_DAY = %s")
         params.append(selected_time_of_day)
 
-    # uild final query
+    #Build final query
     where_clause = "WHERE " + " AND ".join(filters)
     query = f"{base_query} {where_clause} GROUP BY AIRPORT_LATITUDE, AIRPORT_LONGITUDE, INCIDENT_YEAR, TIME_OF_DAY, OPERATOR ORDER BY INCIDENT_YEAR"
 
@@ -243,10 +250,13 @@ elif selected == "Heatmap":
     
     #Create coordinate df, convert coords to numeric
     coords_df = pd.DataFrame(airport_coords, columns=["Latitude", "Longitude", "Year", "TimeOfDay", "Operator", "Bird Strikes"])
+    #Convert columns to numeric
     coords_df["Latitude"] = pd.to_numeric(coords_df["Latitude"], errors="coerce")
     coords_df["Longitude"] = pd.to_numeric(coords_df["Longitude"], errors="coerce")
+    #Drop na values
     coords_df.dropna(subset=["Latitude", "Longitude"], inplace=True)
 
+    #Create heat map
     global_map = folium.Map(location=[37.0902, -95.7129], zoom_start=2)
     heat_data = coords_df[["Latitude", "Longitude"]].values.tolist()
     HeatMap(heat_data).add_to(global_map)
@@ -272,6 +282,7 @@ elif selected == "Yearly Strikes":
     query_operators = "SELECT DISTINCT OPERATOR FROM FAA_BIRD_STRIKES ORDER BY OPERATOR"
     cursor.execute(query_operators)
     operators = cursor.fetchall()
+    #Create list of operators
     operator_list = ["All"] + [ToD[0] if ToD[0] is not None else "Unknown" for ToD in operators]
     selected_operator = st.sidebar.selectbox("Select Operator", operator_list)
     
@@ -279,6 +290,7 @@ elif selected == "Yearly Strikes":
     query_time_of_day = "SELECT DISTINCT TIME_OF_DAY FROM FAA_BIRD_STRIKES ORDER BY TIME_OF_DAY"
     cursor.execute(query_time_of_day)
     time_of_day = cursor.fetchall()
+    #Create list for time of day
     time_of_day_list = ["All"] + [ToD[0] if ToD[0] is not None else "Unknown" for ToD in time_of_day]
     selected_time_of_day = st.sidebar.selectbox("Select Time of Day", time_of_day_list)
 
@@ -286,13 +298,15 @@ elif selected == "Yearly Strikes":
     query_aircraft = "SELECT DISTINCT AIRCRAFT FROM FAA_BIRD_STRIKES ORDER BY AIRCRAFT"
     cursor.execute(query_aircraft)
     aircraft = cursor.fetchall()
+    #Create list of aircrafts
     aircraft_list = ["All"] + [ToD[0] if ToD[0] is not None else "Unknown" for ToD in aircraft]
     selected_aircraft = st.sidebar.selectbox("Select Aircraft", aircraft_list)
 
-    #Dynamic query
+    #Initialize filters and parameters for dynamic query
     filters = []
     params = []
 
+    #Build final query
     if selected_operator != "All":
         filters.append("OPERATOR = %s")
         params.append(selected_operator)
@@ -302,7 +316,7 @@ elif selected == "Yearly Strikes":
     if selected_aircraft != "All":
         filters.append("AIRCRAFT = %s")
         params.append(selected_aircraft)
-
+        
     if filters:
         where_clause = "WHERE " + " AND ".join(filters)
         query = f"{base_query} {where_clause} GROUP BY INCIDENT_YEAR, TIME_OF_DAY, OPERATOR, AIRCRAFT ORDER BY INCIDENT_YEAR"
@@ -315,6 +329,7 @@ elif selected == "Yearly Strikes":
     
     #Create yearly strikes df
     yearly_strikes_df = pd.DataFrame(yearly_strikes, columns=["Year", "Time of Day", "Operator", "Aircraft", "Bird Strikes"])
+    #Convert columns to numeric
     yearly_strikes_df["Year"] = pd.to_numeric(yearly_strikes_df["Year"], errors="coerce")
     yearly_strikes_df["Bird Strikes"] = pd.to_numeric(yearly_strikes_df["Bird Strikes"], errors="coerce")
  
@@ -346,8 +361,8 @@ elif selected == "Time":
 
     #Create time of day df, convert strikes to numeric
     time_of_day_df = pd.DataFrame(time_of_day, columns=["Time of Day", "Bird Strikes"])
+    #Convert to numeric
     time_of_day_df["Bird Strikes"] = pd.to_numeric(time_of_day_df["Bird Strikes"], errors="coerce")
-
     #Convert na to unknown
     time_of_day_df['Time of Day'].fillna('Unknown', inplace=True)
 
@@ -366,7 +381,9 @@ elif selected == "Time":
 
     #Create time  df, convert strikes to numeric
     time_df = pd.DataFrame(time_hour, columns=["Hour", "Bird Strikes"])
+    #Convert to numeric
     time_df["Bird Strikes"] = pd.to_numeric(time_df["Bird Strikes"], errors="coerce")
+    #Drop na values
     time_df = time_df.dropna()
     
     #Query to get bird strikes grouped by phase of flight
@@ -383,6 +400,7 @@ elif selected == "Time":
 
     #Create phase of flight df, convert strikes to numeric
     phase_of_flight_df = pd.DataFrame(phase_of_flight, columns=["Phase of Flight", "Bird Strikes"])
+    #Convert to numeric
     phase_of_flight_df["Bird Strikes"] = pd.to_numeric(phase_of_flight_df["Bird Strikes"], errors="coerce")
     #Convert na to unknown
     phase_of_flight_df['Phase of Flight'].fillna('Enroute', inplace=True)
@@ -394,6 +412,7 @@ elif selected == "Time":
     #Create three columns for the bar charts side by side
     chart_col1, chart_col2, chart_col3 = st.columns(3)       
     with chart_col1:
+        #Create number of bird strikes by time of day chart
         st.subheader("by Time of Day")
         fig, ax = plt.subplots(figsize=(8, 8))
         ax.pie(
@@ -408,6 +427,7 @@ elif selected == "Time":
         st.pyplot(fig)
         
     with chart_col2:
+       #Create number of bird strikes by hour chart
        st.subheader("by Hour")
        fig, ax = plt.subplots(figsize=(8, 8))
        ax.bar(time_df["Hour"], time_df["Bird Strikes"], color="aquamarine")
@@ -419,6 +439,7 @@ elif selected == "Time":
        st.pyplot(fig)
       
     with chart_col3:
+        #Create number of bird strikes by phase of flight chart
         st.subheader("By Phase of Flight")
         fig, ax = plt.subplots()
         ax.barh(phase_of_flight_df["Phase of Flight"], phase_of_flight_df["Bird Strikes"], color='cornflowerblue')
@@ -446,6 +467,7 @@ elif selected == "Seasonality":
 
     #Create monthly strikes df
     monthly_strikes_df = pd.DataFrame(monthly_strikes, columns=["Month", "Bird Strikes"])
+    #Convert to numeric
     monthly_strikes_df["Month"] = pd.to_numeric(monthly_strikes_df["Month"], errors="coerce")
     monthly_strikes_df["Bird Strikes"] = pd.to_numeric(monthly_strikes_df["Bird Strikes"], errors="coerce")
     
@@ -463,6 +485,7 @@ elif selected == "Seasonality":
 
     #Create quarterly strikes df
     quarterly_strikes_df = pd.DataFrame(quarterly_strikes, columns=["Quarter", "Bird Strikes"])
+    #Convert to numeric
     quarterly_strikes_df["Quarter"] = pd.to_numeric(quarterly_strikes_df["Quarter"], errors="coerce")
     quarterly_strikes_df["Bird Strikes"] = pd.to_numeric(quarterly_strikes_df["Bird Strikes"], errors="coerce")
     
@@ -524,6 +547,7 @@ elif selected == "Aircraft":
 
     #Create phase of flight df, convert strikes to numeric
     aircraft_df = pd.DataFrame(aircraft, columns=["Aircraft", "Bird Strikes"])
+    #Convert to numeric
     aircraft_df["Bird Strikes"] = pd.to_numeric(aircraft_df["Bird Strikes"], errors="coerce")
     
     #Query to get bird strikes grouped by engine type
@@ -552,6 +576,7 @@ elif selected == "Aircraft":
 
     #Create engine class df, convert strikes to numeric
     engine_class_df = pd.DataFrame(engine_class, columns=["Engine Class", "Bird Strikes"])
+    #Convert to numeric
     engine_class_df["Bird Strikes"] = pd.to_numeric(engine_class_df["Bird Strikes"], errors="coerce")
     #Convert na to unknown
     engine_class_df['Engine Class'].fillna('Unknown', inplace=True)
@@ -578,6 +603,7 @@ elif selected == "Aircraft":
 
     #Create engine class df, convert strikes to numeric
     num_engines_df = pd.DataFrame(num_engines, columns=["Number of Engines", "Bird Strikes"])
+    #Convert to numeric
     num_engines_df["Bird Strikes"] = pd.to_numeric(num_engines_df["Bird Strikes"], errors="coerce")
     #Convert na to unknown
     num_engines_df['Number of Engines'].fillna('Unknown', inplace=True)
@@ -640,6 +666,7 @@ elif selected == "Species":
 
     #Create phase of flight df, convert strikes to numeric
     species_df = pd.DataFrame(species, columns=["Species", "Bird Strikes"])
+    #Convert to numeric
     species_df["Bird Strikes"] = pd.to_numeric(species_df["Bird Strikes"], errors="coerce")
     
     #Create phase of flight chart
@@ -670,7 +697,7 @@ elif selected == "Scatter Plot":
         "Speed": "SPEED",
         "Distance": "DISTANCE"
     }
-    x_column = x_column_map[x_variable]  # Get selected column name
+    x_column = x_column_map[x_variable]  #Get selected column name
     
     #Define the query with dynamic X variable
     scatter_query = f"""
@@ -694,6 +721,7 @@ elif selected == "Scatter Plot":
     scatter_df = pd.DataFrame(scatter, columns=["Date", "Total_Cost", "Warned", x_variable])
     #Make sure values are numeric
     scatter_df["Total_Cost"] = pd.to_numeric(scatter_df["Total_Cost"], errors="coerce")
+    #Convert to numeric
     scatter_df[x_variable] = pd.to_numeric(scatter_df[x_variable], errors="coerce")
     #Apply log transformation
     scatter_df[f"Log_{x_variable}"] = np.log10(scatter_df[x_variable] + 1)
@@ -705,7 +733,6 @@ elif selected == "Scatter Plot":
     
     #Calculate Pearson's r
     pearson_r, _ = stats.pearsonr(scatter_df[f"Log_{x_variable}"], scatter_df["Log_Cost"])
-    
     
     #Create scatter plot
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -721,7 +748,7 @@ elif selected == "Scatter Plot":
     ax.set_ylabel("Log Cost", fontsize=12)
     ax.set_title(f"Scatter Plot: Log Cost vs Log {x_variable} | Pearson's r = {pearson_r:.2f}", fontsize=14)
 
-    # Calculate Pearson's r for each 'Warned' category and display on plot
+    #Calculate Pearson's r for each 'Warned' category and display on plot
     for warned_value in scatter_df['Warned'].unique():
         subset = scatter_df[scatter_df['Warned'] == warned_value]
         pearson_r, _ = stats.pearsonr(subset[f"Log_{x_variable}"], subset["Log_Cost"])
