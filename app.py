@@ -32,7 +32,7 @@ cursor = conn.cursor()
 ###################################################################################################
 #Configure settings for streamlit app
 st.set_page_config(
-    page_title="Aviation Bird Strikes",
+    page_title="Aviation Wildlife Strikes",
     page_icon="✈️",
     layout="wide",
     initial_sidebar_state="expanded")
@@ -45,7 +45,7 @@ with st.sidebar:
   selected = option_menu(
     menu_title = "Menu",
     options = ["Home", "Heatmap", "Yearly Strikes", "Time", "Seasonality", "Aircraft", "Species", "Scatter Plot", "About"],
-    icons = ["house", "map", "calendar", "clock", "sun", "airplane", "cloud", "dot", "question"],
+    icons = ["house", "map", "calendar", "clock", "sun", "airplane", "animal", "dot", "question"],
     menu_icon = "cast",
     default_index = 0,
   )
@@ -53,9 +53,9 @@ with st.sidebar:
 ###################################################################################################
 #Configure Home page.
 if selected == "Home":
-    st.title("Bird Strikes in Aviation Dashboard")
+    st.title("Wildlife Strikes in Aviation Dashboard")
     st.markdown("""
-        Welcome to the **Bird Strikes in Aviation Dashboard**! This app allows users to analyze and visualize aviation bird strike data from **1996 to present**. 
+        Welcome to the **Wildlife Strikes in Aviation Dashboard**! This app allows users to analyze and visualize aviation wildlife strike data from **1996 to present**. 
         Discover valuable insights into trends, seasonal patterns, and other metrics to help improve aviation safety.
         
         👉 **Get started** by selecting an option from the sidebar.
@@ -90,7 +90,7 @@ if selected == "Home":
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        st.metric(label="Total Bird Strikes", value=f"{total_bird_strikes:,}")
+        st.metric(label="Total Wildlife Strikes", value=f"{total_bird_strikes:,}")
     
     with col2:
         st.metric(label="Total Cost", value=f"${total_cost:,.2f}")
@@ -160,30 +160,30 @@ if selected == "Home":
     
     with chart_col1:
         #Plot Top 10 States bar chart
-        st.subheader("Top 10 States with Bird Strikes")
+        st.subheader("Top 10 States with Wildlife Strikes")
         fig, ax = plt.subplots()
         ax.bar(states_df["State"], states_df["Bird Strikes"], color='skyblue')
         ax.set_xlabel("State")
-        ax.set_ylabel("Number of Bird Strikes")
+        ax.set_ylabel("Number of Wildlife Strikes")
         st.pyplot(fig)
 
     with chart_col2:
         #Plot Top 10 Airports bar chart
-        st.subheader("Top 10 Airports with Bird Strikes")
+        st.subheader("Top 10 Airports with Wildlife Strikes")
         fig, ax = plt.subplots()
         ax.barh(airports_df["Airport"], airports_df["Bird Strikes"], color='lightgreen')
         ax.set_xlabel("Airport")
-        ax.set_ylabel("Number of Bird Strikes")
+        ax.set_ylabel("Number of Wildlife Strikes")
         ax.invert_yaxis()
         st.pyplot(fig)
     
     with chart_col3:
         #Plot Top 10 Carriers bar chart
-        st.subheader("Top 10 Carriers with Bird Strikes")
+        st.subheader("Top 10 Carriers with Wildlife Strikes")
         fig, ax = plt.subplots()
         ax.barh(carriers_df["Carrier"], carriers_df["Bird Strikes"], color='orange')
         ax.set_xlabel("Carrier")
-        ax.set_ylabel("Number of Bird Strikes")
+        ax.set_ylabel("Number of Wildlife Strikes")
         ax.invert_yaxis()
         st.pyplot(fig)
        
@@ -262,13 +262,13 @@ elif selected == "Heatmap":
     HeatMap(heat_data).add_to(global_map)
     
     #Display map in app
-    st.title(f"Heatmap of Global Bird Strikes ({start_year}-{end_year})")
+    st.title(f"Heatmap of Global Wildlife Strikes ({start_year}-{end_year})")
     folium_static(global_map)
     
 ###################################################################################################
 #Configure Yearly Strikes page. 
 elif selected == "Yearly Strikes":
-    st.title("Yearly Number of Bird Strikes")
+    st.title("Yearly Number of Wildlife Strikes")
     
     #Query to get bird strikes grouped by year, with user option to filter
     base_query = """
@@ -337,14 +337,14 @@ elif selected == "Yearly Strikes":
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.bar(yearly_strikes_df["Year"], yearly_strikes_df["Bird Strikes"], color="mediumpurple")
     ax.set_xlabel("Year", fontsize=12)
-    ax.set_ylabel("Number of Bird Strikes", fontsize=12)
+    ax.set_ylabel("Number of Wildlife Strikes", fontsize=12)
     ax.tick_params(axis="x", rotation=45)
     st.pyplot(fig)
         
 ###################################################################################################
 #Configure Time of Day page.
 elif selected == "Time":
-    st.title("Number of Bird Strikes")
+    st.title("Number of Wildlife Strikes")
     
     #Query to get bird strikes grouped by time of day
     query_ToD = """
@@ -434,7 +434,7 @@ elif selected == "Time":
        ax.set_xlabel("Hour", fontsize=12)
        ax.set_xticks(time_df["Hour"]) 
        ax.tick_params(axis="x", rotation=0)
-       ax.set_ylabel("Number of Bird Strikes", fontsize=12)
+       ax.set_ylabel("Number of Wildlife Strikes", fontsize=12)
        ax.tick_params(axis="x", rotation=45)
        st.pyplot(fig)
       
@@ -443,7 +443,7 @@ elif selected == "Time":
         st.subheader("By Phase of Flight")
         fig, ax = plt.subplots()
         ax.barh(phase_of_flight_df["Phase of Flight"], phase_of_flight_df["Bird Strikes"], color='cornflowerblue')
-        ax.set_xlabel("Number of Bird Strikes")
+        ax.set_xlabel("Number of Wildlife Strikes")
         ax.set_ylabel("Phase of Flight")
         ax.invert_yaxis()
         st.pyplot(fig)
@@ -494,16 +494,16 @@ elif selected == "Seasonality":
     
     with chart_col1:
         #Plot monthly strikes bar chart
-        st.subheader("Monthly Bird Strikes")
+        st.subheader("Monthly Wildlife Strikes")
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.bar(
             monthly_strikes_df["Month"],
-            monthly_strikes_df["Bird Strikes"],
+            monthly_strikes_df["Wildlife Strikes"],
             color="lightcoral",
             width=0.6
         )
         ax.set_xlabel("Month", fontsize=12)
-        ax.set_ylabel("Number of Bird Strikes", fontsize=12)
+        ax.set_ylabel("Number of Wildlife Strikes", fontsize=12)
         ax.set_xticks(range(1, 13))
         ax.set_xticklabels(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
         ax.grid(axis="y", linestyle="--", alpha=0.7)
@@ -511,7 +511,7 @@ elif selected == "Seasonality":
         
     with chart_col2:
         #Plot quarterly strikes bar chart
-        st.subheader("Quarterly Bird Strikes")
+        st.subheader("Quarterly Wildlife Strikes")
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.bar(
             quarterly_strikes_df["Quarter"],
@@ -520,7 +520,7 @@ elif selected == "Seasonality":
             width=0.6
         )
         ax.set_xlabel("Quarter", fontsize=12)
-        ax.set_ylabel("Number of Bird Strikes", fontsize=12)
+        ax.set_ylabel("Number of Wildlife Strikes", fontsize=12)
         ax.set_xticks(range(1, 5))
         ax.set_xticklabels(["Q1", "Q2", "Q3", "Q4"])
         ax.grid(axis="y", linestyle="--", alpha=0.7)
@@ -529,7 +529,7 @@ elif selected == "Seasonality":
 ###################################################################################################
 #Configure Aircraft page.
 elif selected == "Aircraft":
-    st.title("Number of Bird Strikes")
+    st.title("Number of Wildlife Strikes")
     
     #Query to get bird strikes grouped by aircraft
     query_aircraft = """
@@ -635,7 +635,7 @@ elif selected == "Aircraft":
         #Create bird strikes by number of engines chart
         fig, ax = plt.subplots(figsize=(10,5))
         ax.bar(num_engines_df["Number of Engines"], num_engines_df["Bird Strikes"], color='midnightblue')
-        ax.set_ylabel("Number of Bird Strikes")
+        ax.set_ylabel("Number of Wildlife Strikes")
         ax.set_xlabel("Number of Engines")
         #Customize the x-axis ticks and labels
         ordered_ticks = ['One', 'Two', 'Three', 'Four', 'Unknown']
@@ -648,7 +648,7 @@ elif selected == "Aircraft":
 ###################################################################################################
 #Configure Species page.
 elif selected == "Species":
-    st.title("Number of Bird Strikes by Species")
+    st.title("Number of Wildlife Strikes by Species")
     
     #Query to get bird strikes grouped by phase of flight
     query_species = """
@@ -672,7 +672,7 @@ elif selected == "Species":
     #Create phase of flight chart
     fig, ax = plt.subplots(figsize=(10,5))
     ax.barh(species_df["Species"], species_df["Bird Strikes"], color='forestgreen')
-    ax.set_xlabel("Number of Bird Strikes")
+    ax.set_xlabel("Number of Wildlife Strikes")
     ax.set_ylabel("Species")
     ax.invert_yaxis()
     st.pyplot(fig)
@@ -771,7 +771,7 @@ elif selected == "About":
 
         <p><a href='https://www.linkedin.com/in/vlad-lee' target='_blank'>LinkedIn</a></p>
         <p><a href='https://www.nera.com/experts/l/vladislav-lee.html?lang=en' target='_blank'>NERA</a></p>
-        <p><a href='https://github.com/bomimyhomie/Aviation-Bird-Strike' target='_blank'>GitHub</a></p>
+        <p><a href='https://github.com/bomimyhomie/Aviation-Wildlife-Strike' target='_blank'>GitHub</a></p>
         <p>For questions or feedback, contact the author at 
         <a href='mailto:Vlad7984@gmail.com'>vlad7984@gmail.com</a>.</p>
     """, unsafe_allow_html=True)
