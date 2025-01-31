@@ -17,7 +17,7 @@ import seaborn as sns
 #Define connection parameters
 connection_params = {
     "user": "",
-    "password": "?",
+    "password": "",
     "account": "",  # E.g., "abc123.snowflakecomputing.com"
     "warehouse": "",
     "database": "",
@@ -45,7 +45,7 @@ with st.sidebar:
   selected = option_menu(
     menu_title = "Menu",
     options = ["Home", "Heatmap", "Yearly Strikes", "Time", "Seasonality", "Aircraft", "Species", "Scatter Plot", "About"],
-    icons = ["house", "map", "calendar", "clock", "sun", "airplane", "animal", "dot", "question"],
+    icons = ["house", "map", "calendar", "clock", "tropical-storm", "airplane", "feather", "graph-up", "question"],
     menu_icon = "cast",
     default_index = 0,
   )
@@ -498,7 +498,7 @@ elif selected == "Seasonality":
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.bar(
             monthly_strikes_df["Month"],
-            monthly_strikes_df["Wildlife Strikes"],
+            monthly_strikes_df["Bird Strikes"],
             color="lightcoral",
             width=0.6
         )

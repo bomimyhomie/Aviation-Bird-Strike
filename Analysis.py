@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelEncoder
 #Define connection parameters
 connection_params = {
     "user": "",
-    "password": "?",
+    "password": "",
     "account": "",  # E.g., "abc123.snowflakecomputing.com"
     "warehouse": "",
     "database": "",
