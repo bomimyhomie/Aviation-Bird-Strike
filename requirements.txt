@@ -7,3 +7,5 @@ numpy
 folium
 scipy
 seaborn
+streamlit-option-menu
+streamlit-folium
