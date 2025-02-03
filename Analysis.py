@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-import os
 import pandas as pd
+import streamlit as st
 import snowflake.connector
-from snowflake_connection import get_snowflake_connection
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -12,10 +10,25 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
-from adjustText import adjust_text
 
-conn = get_snowflake_connection()
-cursor = conn.cursor()   
+#Access Snowflake credentials from secrets
+sf_user = st.secrets["snowflake"]["user"]
+sf_password = st.secrets["snowflake"]["password"]
+sf_account = st.secrets["snowflake"]["account"]
+sf_warehouse = st.secrets["snowflake"]["warehouse"]
+sf_database = st.secrets["snowflake"]["database"]
+sf_schema = st.secrets["snowflake"]["schema"]
+
+#Connect to snowflake database
+conn = snowflake.connector.connect(
+    user=sf_user,
+    password=sf_password,
+    account=sf_account,
+    warehouse=sf_warehouse,
+    database=sf_database,
+    schema=sf_schema
+)
+cursor = conn.cursor() 
 
 #Query to pull data from Snowflake
 query = """
@@ -282,8 +295,3 @@ feature_importances2 = rf_model2.feature_importances_
 feature_importance_df2 = pd.DataFrame({'Feature': x_train2.columns, 'Importance': feature_importances2})
 feature_importance_df2 = feature_importance_df2.sort_values(by='Importance', ascending=False)
 print(feature_importance_df2)
-
-
-
-
-
