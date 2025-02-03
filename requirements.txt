@@ -1,7 +1,7 @@
 streamlit
 pandas
 altair
-snowflake.connector
+snowflake-connector-python
 matplotlib
 numpy
 folium
