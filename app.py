@@ -4,12 +4,9 @@ import altair as alt
 import snowflake.connector
 import matplotlib.pyplot as plt
 import numpy as np
-import streamlit_option_menu
-from streamlit_option_menu import option_menu
 import folium
 from folium.plugins import HeatMap
 from streamlit_folium import folium_static
-import matplotlib.ticker as mticker
 import scipy.stats as stats
 import seaborn as sns
 

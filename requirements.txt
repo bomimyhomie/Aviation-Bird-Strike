@@ -4,8 +4,6 @@ altair
 snowflake.connector
 matplotlib.pyplot
 numpy
-streamlit_option_menu
 folium
-matplotlib.ticker
 scipy.stats
 seaborn
