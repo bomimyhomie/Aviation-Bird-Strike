@@ -9,6 +9,7 @@ from folium.plugins import HeatMap
 from streamlit_folium import folium_static
 import scipy.stats as stats
 import seaborn as sns
+from streamlit_option_menu import option_menu
 
 #Access Snowflake credentials from secrets
 sf_user = st.secrets["snowflake"]["user"]
