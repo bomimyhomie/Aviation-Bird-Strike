@@ -14,19 +14,23 @@ import matplotlib.ticker as mticker
 import scipy.stats as stats
 import seaborn as sns
 
-#Define connection parameters
-connection_params = {
-    "user": "",
-    "password": "",
-    "account": "",
-    "warehouse": "",
-    "database": "",
-    "schema": "",
-    "role": ""
-}
+#Access Snowflake credentials from secrets
+sf_user = st.secrets["snowflake"]["user"]
+sf_password = st.secrets["snowflake"]["password"]
+sf_account = st.secrets["snowflake"]["account"]
+sf_warehouse = st.secrets["snowflake"]["warehouse"]
+sf_database = st.secrets["snowflake"]["database"]
+sf_schema = st.secrets["snowflake"]["schema"]
 
 #Connect to snowflake database
-conn = snowflake.connector.connect(**connection_params)
+conn = snowflake.connector.connect(
+    user=sf_user,
+    password=sf_password,
+    account=sf_account,
+    warehouse=sf_warehouse,
+    database=sf_database,
+    schema=sf_schema
+)
 cursor = conn.cursor()   
 
 ###################################################################################################
@@ -775,4 +779,3 @@ elif selected == "About":
         <p>For questions or feedback, contact the author at 
         <a href='mailto:Vlad7984@gmail.com'>vlad7984@gmail.com</a>.</p>
     """, unsafe_allow_html=True)
-

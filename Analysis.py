@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 import snowflake.connector
+from snowflake_connection import get_snowflake_connection
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -13,18 +14,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
 from adjustText import adjust_text
 
-#Define connection parameters
-connection_params = {
-    "user": "",
-    "password": "",
-    "account": "",
-    "warehouse": "",
-    "database": "",
-    "schema": "",
-    "role": ""
-}
-
-conn = snowflake.connector.connect(**connection_params)
+conn = get_snowflake_connection()
 cursor = conn.cursor()   
 
 #Query to pull data from Snowflake

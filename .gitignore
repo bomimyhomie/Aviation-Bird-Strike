@@ -1,1 +1,4 @@
+# Ignore data folder
 /Data/
+# Ignore Streamlit secrets file
+.streamlit/
