@@ -18,7 +18,7 @@ import seaborn as sns
 connection_params = {
     "user": "",
     "password": "",
-    "account": "",  # E.g., "abc123.snowflakecomputing.com"
+    "account": "",
     "warehouse": "",
     "database": "",
     "schema": "",
@@ -55,7 +55,7 @@ with st.sidebar:
 if selected == "Home":
     st.title("Wildlife Strikes in Aviation Dashboard")
     st.markdown("""
-        Welcome to the **Wildlife Strikes in Aviation Dashboard**! This app allows users to analyze and visualize aviation wildlife strike data from **1996 to present**. 
+        Welcome to the **Wildlife Strikes in Aviation Dashboard**! This app allows users to analyze and visualize aviation wildlife strike data from **1990 to present**. 
         Discover valuable insights into trends, seasonal patterns, and other metrics to help improve aviation safety.
         
         👉 **Get started** by selecting an option from the sidebar.
@@ -63,7 +63,7 @@ if selected == "Home":
         Data obtained from the official 
         [**FAA Wildlife Strike Database**](https://wildlife.faa.gov/).
     """, unsafe_allow_html=True)
-    st.markdown("## Key Metrics (1996 - 2025):")         
+    st.markdown("## Key Metrics (1990 - 2025):")         
     
 #Query to get total metrics
     query_total_metrics = """
@@ -93,10 +93,10 @@ if selected == "Home":
         st.metric(label="Total Wildlife Strikes", value=f"{total_bird_strikes:,}")
     
     with col2:
-        st.metric(label="Total Cost", value=f"${total_cost:,.2f}")
+        st.metric(label="Total Cost", value=f"${total_cost:,.0f}")
         
     with col3:
-        st.metric(label="Total Cost (Inflation Adjusted)", value=f"${total_cost_infl_adj:,.2f}")
+        st.metric(label="Total Cost (Inflation Adjusted)", value=f"${total_cost_infl_adj:,.0f}")
     
     with col4:
         st.metric(label="Total Fatalities", value=total_fatalities)
@@ -403,7 +403,7 @@ elif selected == "Time":
     #Convert to numeric
     phase_of_flight_df["Bird Strikes"] = pd.to_numeric(phase_of_flight_df["Bird Strikes"], errors="coerce")
     #Convert na to unknown
-    phase_of_flight_df['Phase of Flight'].fillna('Enroute', inplace=True)
+    phase_of_flight_df['Phase of Flight'].fillna('En Route', inplace=True)
     #Group by phase of flight again because null values changes to Unknown
     phase_of_flight_df = phase_of_flight_df.groupby('Phase of Flight')['Bird Strikes'].sum().reset_index()
     #Order by bird strikes descending
@@ -771,7 +771,7 @@ elif selected == "About":
 
         <p><a href='https://www.linkedin.com/in/vlad-lee' target='_blank'>LinkedIn</a></p>
         <p><a href='https://www.nera.com/experts/l/vladislav-lee.html?lang=en' target='_blank'>NERA</a></p>
-        <p><a href='https://github.com/bomimyhomie/Aviation-Wildlife-Strike' target='_blank'>GitHub</a></p>
+        <p><a href='https://github.com/bomimyhomie/Aviation-Wildlife-Strikes' target='_blank'>GitHub</a></p>
         <p>For questions or feedback, contact the author at 
         <a href='mailto:Vlad7984@gmail.com'>vlad7984@gmail.com</a>.</p>
     """, unsafe_allow_html=True)
