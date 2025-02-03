@@ -2,8 +2,8 @@ streamlit
 pandas
 altair
 snowflake.connector
-matplotlib.pyplot
+matplotlib
 numpy
 folium
-scipy.stats
+scipy
 seaborn
